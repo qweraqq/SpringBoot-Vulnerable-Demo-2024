@@ -1,71 +1,74 @@
 package com.shen1991.vulnerable.controller;
 
 import com.shen1991.vulnerable.handler.ResponseHandler;
+import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
 public class SSRFController {
-
-    Set<String> blockedIpPool = new HashSet<>(Arrays.asList("127.0.0.1", "::1"));
-
+    
     @RequestMapping(value = "/ssrf-vulnerable", method = RequestMethod.POST)
     public ResponseEntity<Object> ssrfVulnerable(
             @RequestParam(name = "hostname", required = false, defaultValue = "http://www.baidu.com") String hostname,
             Model model) {
-        Map<String, Object> data = new HashMap<>();
-        URL aURL;
         try {
-            aURL = new URI(hostname).toURL();
-        } catch (MalformedURLException e) {
-            return ResponseHandler.generateErrorResponse("Failed", e.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-
-        InetAddress inet;
-        try {
-            inet = InetAddress.getByName(aURL.getAuthority());
-        } catch (UnknownHostException e) {
+            String body = fetchRemoteObjectVulnerable(hostname);
+            return ResponseHandler.generateResponse("Success", body, HttpStatus.OK);
+        } catch (Exception e) {
             return ResponseHandler.generateErrorResponse("Failed", e.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
         }
 
-        String ip = inet.getHostAddress();
-        if (blockedIpPool.contains(ip)) {
-            return ResponseHandler.generateErrorResponse("Failed", "Forbidden", HttpStatus.FORBIDDEN);
-        }
-
-        String body = FetchHost(hostname);
-        return ResponseHandler.generateResponse("Success", body, HttpStatus.OK);
     }
 
+    private static String fetchRemoteObjectVulnerable(String hostname) throws Exception {
+        URL url = new URI(hostname).toURL();;
+        URLConnection connection = url.openConnection();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        return reader.lines().collect(Collectors.joining());
+    }
 
-    protected String FetchHost(String host) {
-        HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(host))
-                .GET()
-                .build();
-
-        HttpResponse<String> response;
+    @RequestMapping(value = "/ssrf", method = RequestMethod.POST)
+    public ResponseEntity<Object> ssrf(
+            @RequestParam(name = "hostname", required = false, defaultValue = "http://www.baidu.com") String hostname,
+            Model model) {
         try {
-            response = HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
-        } catch (IOException | InterruptedException e) {
-            return null; // Consider returning an error message or handling the error more gracefully
+            String body = fetchRemoteObject(hostname);
+            return ResponseHandler.generateResponse("Success", body, HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseHandler.generateErrorResponse("Failed", e.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
         }
 
-        return response.body();
+    }
+
+    private static String fetchRemoteObject(String hostname) throws Exception {
+        URL url = new URI(hostname).toURL();;
+
+        if (!url.getHost().endsWith(".baidu.com") ||
+                !url.getProtocol().equals("http") &&
+                        !url.getProtocol().equals("https")) {
+            throw new Exception("Forbidden remote source");
+        }
+
+        URLConnection connection = url.openConnection();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        return reader.lines().collect(Collectors.joining());
     }
 
 }

@@ -1,7 +1,6 @@
 package com.shen1991.vulnerable.controller;
 
 import ognl.Ognl;
-import ognl.OgnlContext;
 import ognl.OgnlException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,6 +17,26 @@ public class CmdController {
                                  Model model) {
         String expression = "";
         try {
+            expression = runOgnlVulnerable(name);
+        } catch (OgnlException e) {
+            model.addAttribute("error", e);
+        }
+        model.addAttribute("message", expression);
+        return "ongl";
+    }
+
+    private String runOgnlVulnerable(String expression) throws OgnlException {
+        Object root = new Object();
+        Object res = Ognl.getValue(expression, root);
+
+        return res.toString();
+    }
+
+    @RequestMapping(value = "/ongl", method = RequestMethod.GET)
+    public String ongl(@RequestParam(name = "name", required = false, defaultValue = "World") String name,
+                       Model model) {
+        String expression = "";
+        try {
             expression = runOgnl(name);
         } catch (OgnlException e) {
             model.addAttribute("error", e);
@@ -27,13 +46,24 @@ public class CmdController {
     }
 
     private String runOgnl(String expression) throws OgnlException {
-        String newStr = '"' + expression + '"';
-        OgnlContext ctx = new OgnlContext();
-        Object expr = Ognl.parseExpression(newStr);
-        Object root = new Object();
-        Object res = Ognl.getValue(expr, ctx, root);
+        // https://codeql.github.com/codeql-query-help/java/java-ognl-injection/
+        // GOOD: The name is validated and expression is evaluated in sandbox
+        System.setProperty("ognl.security.manager", ""); // Or add -Dognl.security.manager to JVM args
+        if (isValid(expression)) {
+            Object root = new Object();
+            Object res = Ognl.getValue(expression, root);
+            return res.toString();
+        } else {
+            // Reject the request
+            return "rejected";
+        }
 
-        return res.toString();
+    }
+
+    public boolean isValid(String expression) {
+        // Custom method to validate the expression.
+        // For instance, make sure it doesn't include unexpected code.
+        return !expression.contains("exec");
     }
 
 }

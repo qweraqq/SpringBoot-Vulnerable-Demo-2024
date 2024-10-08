@@ -25,8 +25,7 @@ public class CryptoService {
 
             byte[] encrypted = cipher.doFinal(value.getBytes());
             return Base64.getEncoder().encodeToString(encrypted);
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        } catch (Exception ignored) {
         }
         return null;
     }
@@ -41,8 +40,7 @@ public class CryptoService {
 
             byte[] original = cipher.doFinal(Base64.getDecoder().decode(encrypted));
             return new String(original);
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        } catch (Exception ignored) {
         }
         return null;
     }
