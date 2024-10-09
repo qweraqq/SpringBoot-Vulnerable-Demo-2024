@@ -17,10 +17,9 @@ public class CryptoService {
     static {
         SecureRandom rand = new SecureRandom();
         rand.nextBytes(KEY);
-        rand.nextBytes(IV);
     }
 
-    public byte[] encrypt(byte[] plaintext) {
+    public byte[] encrypt(byte[] plaintext, byte[] IV) {
         try {
             IvParameterSpec iv = new IvParameterSpec(IV);
             SecretKeySpec secretkeySpec = new SecretKeySpec(KEY, "AES");
@@ -34,7 +33,7 @@ public class CryptoService {
         return null;
     }
 
-    public byte[] decrypt(byte[] ciphertext) {
+    public byte[] decrypt(byte[] ciphertext, byte[] IV) {
         try {
             IvParameterSpec iv = new IvParameterSpec(IV);
             SecretKeySpec secretkeySpec = new SecretKeySpec(KEY, "AES");

@@ -4,6 +4,7 @@ import com.shen1991.vulnerable.entity.CryptoResponse;
 import com.shen1991.vulnerable.service.CryptoService;
 
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
 
@@ -27,7 +28,10 @@ public class CryptoController {
         CryptoResponse cryptoResponse = new CryptoResponse();
         byte[] plaintext;
         try {
-            plaintext = cryptoService.decrypt(Base64.getDecoder().decode(data));
+            byte[] raw = Base64.getDecoder().decode(data);
+            byte[] IV = Arrays.copyOfRange(raw, 0, 16);
+            byte[] ciphertext = Arrays.copyOfRange(raw, 16,  raw.length);
+            plaintext = cryptoService.decrypt(ciphertext, IV);
             cryptoResponse.setPlaintext(Base64.getEncoder().encodeToString(plaintext));
         } catch (Exception ignored) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
@@ -54,8 +58,16 @@ public class CryptoController {
         if(Arrays.equals(plaintext, MAGIC)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
-        byte[] ciphertext = cryptoService.encrypt(Base64.getDecoder().decode(data));
-        cryptoResponse.setCiphertext(Base64.getEncoder().encodeToString(ciphertext));
+
+        byte[] IV = new byte[16];
+        SecureRandom rand = new SecureRandom();
+        rand.nextBytes(IV);
+
+        byte[] ciphertext = cryptoService.encrypt(Base64.getDecoder().decode(data), IV);
+        byte[] ciphertextWithIV = new byte[IV.length + ciphertext.length];
+        System.arraycopy(IV,0, ciphertextWithIV,0, IV.length);
+        System.arraycopy(ciphertext,0,ciphertextWithIV, IV.length, ciphertext.length);
+        cryptoResponse.setCiphertext(Base64.getEncoder().encodeToString(ciphertextWithIV));
         return cryptoResponse;
     }
 
@@ -68,15 +80,17 @@ public class CryptoController {
 
         byte[] raw = Base64.getDecoder().decode(data);
         byte[] hmacReceived = Arrays.copyOfRange(raw, 0, 32);
-        byte[] ciphertext = Arrays.copyOfRange(raw, 32,  raw.length);
+        byte[] ciphertextWithIV = Arrays.copyOfRange(raw, 32, raw.length);
+        byte[] IV = Arrays.copyOfRange(raw, 32, 32+16);
+        byte[] ciphertext = Arrays.copyOfRange(raw, 32+16,  raw.length);
 
-        byte[] hmacCalculated = cryptoService.hmac(ciphertext);
+        byte[] hmacCalculated = cryptoService.hmac(ciphertextWithIV);
 
         if(! Arrays.equals(hmacCalculated, hmacReceived)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
-        byte[] plaintext = cryptoService.decrypt(ciphertext);
+        byte[] plaintext = cryptoService.decrypt(ciphertext, IV);
         cryptoResponse.setPlaintext(Base64.getEncoder().encodeToString(plaintext));
 
         if(Arrays.equals(plaintext, MAGIC)){
@@ -94,12 +108,20 @@ public class CryptoController {
         if(Arrays.equals(plaintext, MAGIC)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
-        byte[] ciphertext = cryptoService.encrypt(Base64.getDecoder().decode(data));
-        byte[] hmac = cryptoService.hmac(ciphertext);
+        byte[] IV = new byte[16];
+        SecureRandom rand = new SecureRandom();
+        rand.nextBytes(IV);
 
-        byte[] ciphertextWithHmac = new byte[hmac.length + ciphertext.length];
+        byte[] ciphertext = cryptoService.encrypt(Base64.getDecoder().decode(data), IV);
+        byte[] ciphertextWithIV = new byte[IV.length + ciphertext.length];
+        System.arraycopy(IV,0, ciphertextWithIV,0, IV.length);
+        System.arraycopy(ciphertext,0,ciphertextWithIV, IV.length, ciphertext.length);
+
+        byte[] hmac = cryptoService.hmac(ciphertextWithIV);
+
+        byte[] ciphertextWithHmac = new byte[hmac.length + ciphertextWithIV.length];
         System.arraycopy(hmac,0, ciphertextWithHmac,0, hmac.length);
-        System.arraycopy(ciphertext,0,ciphertextWithHmac, hmac.length, ciphertext.length);
+        System.arraycopy(ciphertextWithIV,0,ciphertextWithHmac, hmac.length, ciphertextWithIV.length);
         cryptoResponse.setCiphertext(Base64.getEncoder().encodeToString(ciphertextWithHmac));
 
         return cryptoResponse;
