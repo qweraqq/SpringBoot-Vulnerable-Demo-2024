@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.io.IOException;
 import java.io.StringReader;
 
+
 @Controller
 public class XmlController {
     @RequestMapping(value = "/xml-vulnerable", method = RequestMethod.GET)

@@ -5,51 +5,63 @@ import org.springframework.stereotype.Service;
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.Base64;
+
 
 @Service
 public class CryptoService {
-    private static final String KEY = "1234567812345678";
-    private static final String initVector = "1234567812345678";
+    private static final byte[] KEY = new byte[16];
+    private static final byte[] IV = new byte[16];
     private static final String ALGO = "AES/CBC/PKCS5Padding";
 
-    public String encrypt(String value) {
+    static {
+        SecureRandom rand = new SecureRandom();
+        rand.nextBytes(KEY);
+        rand.nextBytes(IV);
+    }
+
+    public byte[] encrypt(byte[] plaintext) {
         try {
-            IvParameterSpec iv = new IvParameterSpec(initVector.getBytes(StandardCharsets.UTF_8));
-            SecretKeySpec skeySpec = new SecretKeySpec(KEY.getBytes(StandardCharsets.UTF_8), "AES");
+            IvParameterSpec iv = new IvParameterSpec(IV);
+            SecretKeySpec secretkeySpec = new SecretKeySpec(KEY, "AES");
 
             Cipher cipher = Cipher.getInstance(ALGO);
-            cipher.init(Cipher.ENCRYPT_MODE, skeySpec, iv);
+            cipher.init(Cipher.ENCRYPT_MODE, secretkeySpec, iv);
 
-            byte[] encrypted = cipher.doFinal(value.getBytes());
-            return Base64.getEncoder().encodeToString(encrypted);
+            return cipher.doFinal(plaintext);
         } catch (Exception ignored) {
         }
         return null;
     }
 
-    public String decrypt(String encrypted) {
+    public byte[] decrypt(byte[] ciphertext) {
         try {
-            IvParameterSpec iv = new IvParameterSpec(initVector.getBytes(StandardCharsets.UTF_8));
-            SecretKeySpec skeySpec = new SecretKeySpec(KEY.getBytes(StandardCharsets.UTF_8), "AES");
+            IvParameterSpec iv = new IvParameterSpec(IV);
+            SecretKeySpec secretkeySpec = new SecretKeySpec(KEY, "AES");
 
             Cipher cipher = Cipher.getInstance(ALGO);
-            cipher.init(Cipher.DECRYPT_MODE, skeySpec, iv);
+            cipher.init(Cipher.DECRYPT_MODE, secretkeySpec, iv);
 
-            byte[] original = cipher.doFinal(Base64.getDecoder().decode(encrypted));
-            return new String(original);
+            return cipher.doFinal(ciphertext);
         } catch (Exception ignored) {
         }
         return null;
     }
 
-    public static IvParameterSpec generateIv() {
-        byte[] iv = new byte[16];
-        new SecureRandom().nextBytes(iv);
-        return new IvParameterSpec(iv);
+
+    public byte[] hmac(byte[] message) {
+        try{
+            SecretKeySpec secretkeySpec = new SecretKeySpec(KEY, "HmacSHA256");
+            Mac hmac = Mac.getInstance("HmacSHA256");
+            hmac.init(secretkeySpec);
+            return hmac.doFinal(message);
+        } catch (Exception ignored) {
+
+        }
+        return null;
     }
+
+
 
 }
 
