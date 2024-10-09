@@ -28,11 +28,11 @@ public class CryptoController {
         CryptoResponse cryptoResponse = new CryptoResponse();
         byte[] plaintext;
         try {
-            byte[] raw = Base64.getDecoder().decode(data);
+            byte[] raw = Base64.getUrlDecoder().decode(data);
             byte[] IV = Arrays.copyOfRange(raw, 0, 16);
             byte[] ciphertext = Arrays.copyOfRange(raw, 16,  raw.length);
             plaintext = cryptoService.decrypt(ciphertext, IV);
-            cryptoResponse.setPlaintext(Base64.getEncoder().encodeToString(plaintext));
+            cryptoResponse.setPlaintext(Base64.getUrlEncoder().encodeToString(plaintext));
         } catch (Exception ignored) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
@@ -50,7 +50,7 @@ public class CryptoController {
         CryptoResponse cryptoResponse = new CryptoResponse();
         byte[] plaintext;
         try {
-            plaintext = Base64.getDecoder().decode(data);
+            plaintext = Base64.getUrlDecoder().decode(data);
         } catch (Exception ignored) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
@@ -63,11 +63,11 @@ public class CryptoController {
         SecureRandom rand = new SecureRandom();
         rand.nextBytes(IV);
 
-        byte[] ciphertext = cryptoService.encrypt(Base64.getDecoder().decode(data), IV);
+        byte[] ciphertext = cryptoService.encrypt(Base64.getUrlDecoder().decode(data), IV);
         byte[] ciphertextWithIV = new byte[IV.length + ciphertext.length];
         System.arraycopy(IV,0, ciphertextWithIV,0, IV.length);
         System.arraycopy(ciphertext,0,ciphertextWithIV, IV.length, ciphertext.length);
-        cryptoResponse.setCiphertext(Base64.getEncoder().encodeToString(ciphertextWithIV));
+        cryptoResponse.setCiphertext(Base64.getUrlEncoder().encodeToString(ciphertextWithIV));
         return cryptoResponse;
     }
 
@@ -78,7 +78,7 @@ public class CryptoController {
     public CryptoResponse decrypt(@RequestParam(value = "data") String data){
         CryptoResponse cryptoResponse = new CryptoResponse();
 
-        byte[] raw = Base64.getDecoder().decode(data);
+        byte[] raw = Base64.getUrlDecoder().decode(data);
         byte[] hmacReceived = Arrays.copyOfRange(raw, 0, 32);
         byte[] ciphertextWithIV = Arrays.copyOfRange(raw, 32, raw.length);
         byte[] IV = Arrays.copyOfRange(raw, 32, 32+16);
@@ -91,7 +91,7 @@ public class CryptoController {
         }
 
         byte[] plaintext = cryptoService.decrypt(ciphertext, IV);
-        cryptoResponse.setPlaintext(Base64.getEncoder().encodeToString(plaintext));
+        cryptoResponse.setPlaintext(Base64.getUrlEncoder().encodeToString(plaintext));
 
         if(Arrays.equals(plaintext, MAGIC)){
             // YOU CAN do some privileged action
@@ -104,7 +104,7 @@ public class CryptoController {
     @PostMapping("/encrypt")
     public CryptoResponse encrypt(@RequestParam(value = "data") String data){
         CryptoResponse cryptoResponse = new CryptoResponse();
-        byte[] plaintext = Base64.getDecoder().decode(data);
+        byte[] plaintext = Base64.getUrlDecoder().decode(data);
         if(Arrays.equals(plaintext, MAGIC)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
@@ -112,7 +112,7 @@ public class CryptoController {
         SecureRandom rand = new SecureRandom();
         rand.nextBytes(IV);
 
-        byte[] ciphertext = cryptoService.encrypt(Base64.getDecoder().decode(data), IV);
+        byte[] ciphertext = cryptoService.encrypt(Base64.getUrlDecoder().decode(data), IV);
         byte[] ciphertextWithIV = new byte[IV.length + ciphertext.length];
         System.arraycopy(IV,0, ciphertextWithIV,0, IV.length);
         System.arraycopy(ciphertext,0,ciphertextWithIV, IV.length, ciphertext.length);
@@ -122,7 +122,7 @@ public class CryptoController {
         byte[] ciphertextWithHmac = new byte[hmac.length + ciphertextWithIV.length];
         System.arraycopy(hmac,0, ciphertextWithHmac,0, hmac.length);
         System.arraycopy(ciphertextWithIV,0,ciphertextWithHmac, hmac.length, ciphertextWithIV.length);
-        cryptoResponse.setCiphertext(Base64.getEncoder().encodeToString(ciphertextWithHmac));
+        cryptoResponse.setCiphertext(Base64.getUrlEncoder().encodeToString(ciphertextWithHmac));
 
         return cryptoResponse;
     }
