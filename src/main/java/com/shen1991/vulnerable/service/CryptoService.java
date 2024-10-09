@@ -11,7 +11,6 @@ import java.security.SecureRandom;
 @Service
 public class CryptoService {
     private static final byte[] KEY = new byte[16];
-    private static final byte[] IV = new byte[16];
     private static final String ALGO = "AES/CBC/PKCS5Padding";
 
     static {

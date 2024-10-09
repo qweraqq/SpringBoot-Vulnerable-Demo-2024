@@ -47,7 +47,10 @@ public class CmdController {
     private String runOgnl(String expression) throws OgnlException {
         // https://codeql.github.com/codeql-query-help/java/java-ognl-injection/
         // GOOD: The name is validated and expression is evaluated in sandbox
-        System.setProperty("ognl.security.manager", ""); // Or add -Dognl.security.manager to JVM args
+
+        System.setProperty("ognl.security.manager", "");
+        // Or add -Dognl.security.manager to JVM args
+
         if (isValid(expression)) {
             Object root = new Object();
             Object res = Ognl.getValue(expression, root);
